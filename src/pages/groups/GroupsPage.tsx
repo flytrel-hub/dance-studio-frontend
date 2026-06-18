@@ -4,11 +4,11 @@ import {
   Box, Card, CardContent, Typography, Button, TextField, IconButton, Dialog,
   DialogTitle, DialogContent, DialogActions, Avatar, Chip, Grid, Select,
   MenuItem, InputLabel, FormControl, useMediaQuery, useTheme, Autocomplete,
-  ListSubheader, InputAdornment, CircularProgress,
+  InputAdornment, CircularProgress,
 } from '@mui/material';
 import {
   Add, Edit, Delete, Groups as GroupsIcon, PersonAdd, PersonRemove,
-  Search, Clear,
+  Search, FitnessCenter,
 } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -232,14 +232,21 @@ export const GroupsPage: React.FC = () => {
                       Тренер: {group.trainer?.fullName}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Участники: {group.membersCount} / {group.maxMembers}
+                      Участники: {group.membersCount + 1} / {group.maxMembers}
                     </Typography>
                     <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {(group.members || []).slice(0, 5).map((m: Client) => (
+                      <Chip
+                        icon={<FitnessCenter sx={{ fontSize: 14 }} />}
+                        label={group.trainer?.fullName}
+                        size="small"
+                        color="primary"
+                        variant="filled"
+                      />
+                      {(group.members || []).slice(0, 4).map((m: Client) => (
                         <Chip key={m.id} label={m.fullName} size="small" variant="outlined" />
                       ))}
-                      {(group.members || []).length > 5 && (
-                        <Chip label={`+${group.members.length - 5}`} size="small" />
+                      {(group.members || []).length > 4 && (
+                        <Chip label={`+${group.members.length - 4}`} size="small" />
                       )}
                     </Box>
                   </Box>
@@ -395,25 +402,37 @@ export const GroupsPage: React.FC = () => {
           {/* Current members */}
           <Box>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              Текущие участники ({selectedGroup?.members?.length || 0} / {selectedGroup?.maxMembers}):
+              Текущие участники:
             </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+              <Chip
+                icon={<FitnessCenter sx={{ fontSize: 14 }} />}
+                label={`${selectedGroup?.trainer?.fullName} (тренер)`}
+                size="small"
+                color="primary"
+                variant="filled"
+              />
+            </Box>
             {selectedGroup?.members && selectedGroup.members.length > 0 ? (
-              <ListSubheader sx={{ bgcolor: 'transparent', lineHeight: '32px' }}>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                 {selectedGroup.members.map((member) => (
                   <Chip
                     key={member.id}
                     label={member.fullName}
                     onDelete={() => handleRemoveMember(member.id)}
                     deleteIcon={<PersonRemove />}
-                    sx={{ m: 0.25 }}
+                    size="small"
                   />
                 ))}
-              </ListSubheader>
+              </Box>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                Группа пуста
+                Нет участников (кроме тренера)
               </Typography>
             )}
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Всего: {(selectedGroup?.members?.length || 0) + 1} / {selectedGroup?.maxMembers}
+            </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
