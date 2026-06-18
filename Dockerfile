@@ -2,9 +2,6 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
-
 COPY package*.json ./
 RUN npm install
 
@@ -16,4 +13,4 @@ RUN npm install -g serve
 
 EXPOSE 5173
 
-CMD ["serve", "-s", "dist", "-l", "5173"]
+CMD ["sh", "-c", "if [ -n \"$VITE_API_URL\" ]; then echo \"window.__ENV__ = { VITE_API_URL: \\\"$VITE_API_URL\\\" };\" > /app/dist/config.js; fi && serve -s dist -l 5173"]

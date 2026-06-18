@@ -1,11 +1,12 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
+  const runtimeEnv = (window as any).__ENV__?.VITE_API_URL;
+  if (runtimeEnv) {
+    return `${runtimeEnv}/api`;
+  }
   if (import.meta.env.VITE_API_URL) {
     return `${import.meta.env.VITE_API_URL}/api`;
-  }
-  if (import.meta.env.PROD) {
-    return '/api';
   }
   return '/api';
 };
