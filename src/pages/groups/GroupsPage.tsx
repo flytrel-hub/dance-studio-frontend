@@ -65,13 +65,22 @@ export const GroupsPage: React.FC = () => {
 
   const isTrainer = user?.role === 'TRAINER';
 
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => { const res = await api.get('/auth/profile'); return res.data; },
+    enabled: isTrainer,
+  });
+
+  const trainerId = profile?.trainerId;
+
   const { data: groups, isLoading: groupsLoading } = useQuery({
-    queryKey: ['groups', isTrainer ? user?.id : null],
+    queryKey: ['groups', isTrainer ? trainerId : null],
     queryFn: async () => {
-      const params = isTrainer ? `?trainerId=${user?.id}` : '';
+      const params = isTrainer && trainerId ? `?trainerId=${trainerId}` : '';
       const res = await api.get(`/groups${params}`);
       return res.data;
     },
+    enabled: !isTrainer || !!trainerId,
   });
 
   const { data: trainers } = useQuery({
@@ -232,7 +241,7 @@ export const GroupsPage: React.FC = () => {
                       Тренер: {group.trainer?.fullName}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Участники: {group.membersCount + 1} / {group.maxMembers}
+                      Участники: {group.membersCount} / {group.maxMembers}
                     </Typography>
                     <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                       <Chip
@@ -402,7 +411,7 @@ export const GroupsPage: React.FC = () => {
           {/* Current members */}
           <Box>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              Текущие участники:
+              Текущие участники ({selectedGroup?.members?.length || 0} / {selectedGroup?.maxMembers}):
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
               <Chip
@@ -431,7 +440,7 @@ export const GroupsPage: React.FC = () => {
               </Typography>
             )}
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Всего: {(selectedGroup?.members?.length || 0) + 1} / {selectedGroup?.maxMembers}
+              Всего: {selectedGroup?.members?.length || 0} / {selectedGroup?.maxMembers}
             </Typography>
           </Box>
         </DialogContent>

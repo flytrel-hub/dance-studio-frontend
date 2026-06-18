@@ -76,6 +76,7 @@ const trainerMenuItems = [
   { text: 'Расписание', icon: <CalendarMonth />, path: '/schedule' },
   { text: 'Мои группы', icon: <Groups />, path: '/groups' },
   { text: 'Посещаемость', icon: <CheckCircle />, path: '/attendance' },
+  { text: 'Заявки', icon: <Event />, path: '/pending-bookings' },
   { text: 'Профиль', icon: <Person />, path: '/profile' },
 ];
 

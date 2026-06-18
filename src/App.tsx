@@ -20,6 +20,7 @@ import { AttendancePage } from './pages/attendance/AttendancePage';
 import { SubscriptionsPage } from './pages/subscriptions/SubscriptionsPage';
 import { PaymentsPage } from './pages/payments/PaymentsPage';
 import { ReportsPage } from './pages/reports/ReportsPage';
+import { PendingBookingsPage } from './pages/pending-bookings/PendingBookingsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 
@@ -75,6 +76,7 @@ const AppRoutes: React.FC = () => {
         <Route path="subscriptions" element={<SubscriptionsPage />} />
         <Route path="payments" element={<AdminRoute><PaymentsPage /></AdminRoute>} />
         <Route path="reports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
+        <Route path="pending-bookings" element={<PendingBookingsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
