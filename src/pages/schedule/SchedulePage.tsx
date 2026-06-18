@@ -25,6 +25,7 @@ const lessonSchema = z.object({
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Формат: ЧЧ:ММ'),
   endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Формат: ЧЧ:ММ'),
   room: z.string().min(1, 'Введите зал').max(20),
+  bookingType: z.enum(['OPEN', 'APPLICATION']).default('OPEN'),
 });
 
 type LessonFormData = z.infer<typeof lessonSchema>;
@@ -54,6 +55,22 @@ const danceIcons: Record<string, string> = {
   'Stretching': '🧘',
   'Dance Mix': '🕺',
   'Jazz-Funk': '🩰',
+};
+
+const getBookingTypeLabel = (type: string) => {
+  switch (type) {
+    case 'APPLICATION': return { label: 'По заявке', color: 'warning' as const };
+    case 'OPEN': return { label: 'Открытое', color: 'success' as const };
+    default: return { label: 'Открытое', color: 'success' as const };
+  }
+};
+
+const getAttendanceStatusLabel = (status: string) => {
+  switch (status) {
+    case 'PENDING': return { label: 'На согласовании', color: 'warning' as const };
+    case 'BOOKED': return { label: 'Записан', color: 'primary' as const };
+    default: return { label: status, color: 'default' as const };
+  }
 };
 
 export const SchedulePage: React.FC = () => {
@@ -176,6 +193,7 @@ export const SchedulePage: React.FC = () => {
         startTime: lesson.startTime,
         endTime: lesson.endTime,
         room: lesson.room,
+        bookingType: lesson.bookingType || 'OPEN',
       });
     }, 0);
   };
@@ -197,7 +215,12 @@ export const SchedulePage: React.FC = () => {
   };
 
   const isBooked = (lesson: any) => {
-    return lesson.attendances?.some((a: any) => a.client?.id === clientId);
+    return lesson.attendances?.find((a: any) => a.client?.id === clientId);
+  };
+
+  const isPending = (lesson: any) => {
+    const att = lesson.attendances?.find((a: any) => a.client?.id === clientId);
+    return att?.status === 'PENDING';
   };
 
   const getAvailableSpots = (lesson: any) => {
@@ -280,7 +303,9 @@ export const SchedulePage: React.FC = () => {
             {(lessons || []).map((lesson: any) => {
               const available = getAvailableSpots(lesson);
               const booked = isBooked(lesson);
+              const pending = isPending(lesson);
               const icon = danceIcons[lesson.group?.danceStyle] || '💃';
+              const bookingType = getBookingTypeLabel(lesson.bookingType || 'OPEN');
 
               return (
                 <Grid item xs={12} sm={6} md={4} key={lesson.id}>
@@ -304,6 +329,7 @@ export const SchedulePage: React.FC = () => {
                                 {lesson.startTime} – {lesson.endTime}
                               </Typography>
                               <Chip label={getStatusLabel(lesson.status)} color={getStatusColor(lesson.status)} size="small" />
+                              <Chip label={bookingType.label} color={bookingType.color} size="small" variant="outlined" />
                             </Box>
                             <Typography fontWeight={600}>{lesson.group?.danceStyle}</Typography>
                             <Typography variant="body2" color="text.secondary">Группа: {lesson.group?.name}</Typography>
@@ -348,18 +374,27 @@ export const SchedulePage: React.FC = () => {
 
                         {!isAdmin && !isTrainer && lesson.status === 'SCHEDULED' && (
                           booked ? (
-                            <Tooltip title="Отменить запись">
-                              <Button
-                                variant="outlined"
-                                color="error"
+                            pending ? (
+                              <Chip
+                                label="На согласовании"
+                                color="warning"
                                 size="small"
-                                startIcon={<EventBusy />}
-                                onClick={() => cancelBookingMutation.mutate(lesson.id)}
-                                disabled={cancelBookingMutation.isPending}
-                              >
-                                Отменить
-                              </Button>
-                            </Tooltip>
+                                sx={{ fontWeight: 600 }}
+                              />
+                            ) : (
+                              <Tooltip title="Отменить запись">
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  startIcon={<EventBusy />}
+                                  onClick={() => cancelBookingMutation.mutate(lesson.id)}
+                                  disabled={cancelBookingMutation.isPending}
+                                >
+                                  Отменить
+                                </Button>
+                              </Tooltip>
+                            )
                           ) : hasActiveSubscription ? (
                             <Button
                               variant="contained"
@@ -368,7 +403,7 @@ export const SchedulePage: React.FC = () => {
                               onClick={() => bookMutation.mutate(lesson.id)}
                               disabled={bookMutation.isPending || available <= 0}
                             >
-                              Записаться
+                              {lesson.bookingType === 'APPLICATION' ? 'Подать заявку' : 'Записаться'}
                             </Button>
                           ) : (
                             <Tooltip title="Для записи необходим абонемент">
@@ -379,7 +414,7 @@ export const SchedulePage: React.FC = () => {
                                   disabled
                                   startIcon={<Schedule />}
                                 >
-                                  Записаться
+                                  {lesson.bookingType === 'APPLICATION' ? 'Подать заявку' : 'Записаться'}
                                 </Button>
                               </span>
                             </Tooltip>
@@ -426,6 +461,17 @@ export const SchedulePage: React.FC = () => {
               <TextField fullWidth label="Время начала" {...register('startTime')} margin="normal" placeholder="10:00" error={!!errors.startTime} helperText={errors.startTime?.message} />
               <TextField fullWidth label="Время окончания" {...register('endTime')} margin="normal" placeholder="11:00" error={!!errors.endTime} helperText={errors.endTime?.message} />
               <TextField fullWidth label="Зал" {...register('room')} margin="normal" error={!!errors.room} helperText={errors.room?.message} />
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Тип записи</InputLabel>
+                <Select
+                  value={watch('bookingType') || 'OPEN'}
+                  onChange={(e) => setValue('bookingType', e.target.value as 'OPEN' | 'APPLICATION')}
+                  label="Тип записи"
+                >
+                  <MenuItem value="OPEN">Открытое (все с абонементом)</MenuItem>
+                  <MenuItem value="APPLICATION">По заявке (согласование тренером)</MenuItem>
+                </Select>
+              </FormControl>
             </Box>
           </DialogContent>
           <DialogActions>

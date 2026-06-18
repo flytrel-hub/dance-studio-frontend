@@ -160,6 +160,8 @@ export const Layout: React.FC = () => {
       case 'subscription_rejected': return <Info fontSize="small" color="error" />;
       case 'booking': return <Event fontSize="small" color="info" />;
       case 'booking_cancelled': return <Event fontSize="small" color="warning" />;
+      case 'booking_approved': return <CheckCircle fontSize="small" color="success" />;
+      case 'booking_rejected': return <Info fontSize="small" color="error" />;
       default: return <Info fontSize="small" />;
     }
   };
