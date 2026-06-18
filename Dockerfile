@@ -11,6 +11,9 @@ RUN npm run build
 
 RUN npm install -g serve
 
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 5173
 
-CMD ["sh", "-c", "if [ -n \"$VITE_API_URL\" ]; then echo \"window.__ENV__ = { VITE_API_URL: \\\"$VITE_API_URL\\\" };\" > /app/dist/config.js; fi && serve -s dist -l 5173"]
+CMD ["/app/entrypoint.sh"]
