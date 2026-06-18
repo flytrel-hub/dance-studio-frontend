@@ -91,12 +91,13 @@ export const ProfilePage: React.FC = () => {
                   size={100}
                 />
                 <Button
+                  variant="contained"
                   size="small"
                   sx={{
                     position: 'absolute', bottom: 0, right: -8,
                     minWidth: 0, width: 32, height: 32, borderRadius: '50%',
-                    bgcolor: 'primary.main', color: 'white',
-                    '&:hover': { bgcolor: 'primary.dark' },
+                    p: 0,
+                    '&.MuiButton-root': { borderRadius: '50%' },
                   }}
                   onClick={() => fileInputRef.current?.click()}
                 >
