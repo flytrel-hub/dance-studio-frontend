@@ -17,11 +17,16 @@ import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { useAuth } from '../../contexts/AuthContext';
 
+const EMOJI_OPTIONS = ['💃', '🕺', '🤸', '🧘', '🩰', '🎵', '🎶', '🎤', '🥁', '🎸', '🎺', '🎻', '🎨', '⚡', '🔥', '💎', '🌟', '🦋', '🌸', '🎭'];
+const COLOR_OPTIONS = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#EC4899', '#8B5CF6', '#06B6D4', '#F59E0B', '#10B981', '#EF4444'];
+
 const groupSchema = z.object({
   name: z.string().min(2, 'Название минимум 2 символа').max(50),
   danceStyle: z.string().min(2, 'Введите направление').max(50),
   trainerId: z.number().min(1, 'Выберите тренера'),
   maxMembers: z.number().min(2, 'Минимум 2 участника').max(50, 'Максимум 50 участников'),
+  icon: z.string().default('💃'),
+  color: z.string().default('#7C3AED'),
 });
 
 type GroupFormData = z.infer<typeof groupSchema>;
@@ -37,6 +42,8 @@ interface Group {
   id: number;
   name: string;
   danceStyle: string;
+  icon: string;
+  color: string;
   trainer: { id: number; fullName: string; specialization: string };
   maxMembers: number;
   membersCount: number;
@@ -144,14 +151,14 @@ export const GroupsPage: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingGroup(null);
-    reset({ name: '', danceStyle: '', trainerId: isTrainer ? (user as any)?.trainerId : 0, maxMembers: 15 });
+    reset({ name: '', danceStyle: '', trainerId: isTrainer ? (user as any)?.trainerId : 0, maxMembers: 15, icon: '💃', color: '#7C3AED' });
   };
 
   const handleOpenEdit = (group: Group) => {
     setEditingGroup(group);
     setDialogOpen(true);
     setTimeout(() => {
-      reset({ name: group.name, danceStyle: group.danceStyle, trainerId: group.trainer.id, maxMembers: group.maxMembers });
+      reset({ name: group.name, danceStyle: group.danceStyle, trainerId: group.trainer.id, maxMembers: group.maxMembers, icon: group.icon || '💃', color: group.color || '#7C3AED' });
     }, 0);
   };
 
@@ -219,8 +226,8 @@ export const GroupsPage: React.FC = () => {
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                     <Box sx={{ display: 'flex', gap: 1.5 }}>
-                      <Avatar sx={{ bgcolor: 'secondary.main', color: 'primary.dark' }}>
-                        <GroupsIcon />
+                      <Avatar sx={{ bgcolor: group.color || '#7C3AED', color: 'white', fontSize: '1.5rem' }}>
+                        {group.icon || '💃'}
                       </Avatar>
                       <Box>
                         <Typography fontWeight={600}>{group.name}</Typography>
@@ -297,6 +304,41 @@ export const GroupsPage: React.FC = () => {
               </FormControl>
             )}
             <TextField fullWidth label="Макс. участников" type="number" {...register('maxMembers', { valueAsNumber: true })} margin="normal" />
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Иконка группы</Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <Box
+                    key={emoji}
+                    onClick={() => setValue('icon', emoji, { shouldValidate: true })}
+                    sx={{
+                      width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      borderRadius: 1, cursor: 'pointer', fontSize: '1.2rem',
+                      border: watch('icon') === emoji ? `2px solid ${watch('color') || '#7C3AED'}` : '2px solid transparent',
+                      bgcolor: watch('icon') === emoji ? `${watch('color') || '#7C3AED'}20` : 'grey.100',
+                      '&:hover': { bgcolor: 'grey.200' },
+                    }}
+                  >
+                    {emoji}
+                  </Box>
+                ))}
+              </Box>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Цвет группы</Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {COLOR_OPTIONS.map((color) => (
+                  <Box
+                    key={color}
+                    onClick={() => setValue('color', color, { shouldValidate: true })}
+                    sx={{
+                      width: 32, height: 32, borderRadius: '50%', bgcolor: color, cursor: 'pointer',
+                      border: watch('color') === color ? '3px solid white' : '3px solid transparent',
+                      boxShadow: watch('color') === color ? `0 0 0 2px ${color}` : 'none',
+                      '&:hover': { transform: 'scale(1.1)' },
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
