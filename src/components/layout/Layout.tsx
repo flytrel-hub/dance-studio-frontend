@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, AppBar, Toolbar, Typography, List, ListItem, ListItemButton,
@@ -9,10 +9,11 @@ import {
   Menu as MenuIcon, Dashboard, People, FitnessCenter, Groups,
   CalendarMonth, CheckCircle, CardMembership, Payment, Assessment,
   Settings, Logout, Person, ChevronLeft, ChevronRight, MoreVert,
-  Home, Notifications, Event, Info, Star,
+  Home, Notifications, Event, Info, Star, Circle,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { InitialsAvatar } from '../InitialsAvatar';
+import api from '../../api/axios';
 
 const DRAWER_WIDTH = 260;
 const COLLAPSED_WIDTH = 72;
@@ -86,6 +87,15 @@ const clientMenuItems = [
   { text: 'Профиль', icon: <Person />, path: '/profile' },
 ];
 
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export const Layout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -96,9 +106,74 @@ export const Layout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const menuItems = user?.role === 'ADMIN' ? adminMenuItems :
     user?.role === 'TRAINER' ? trainerMenuItems : clientMenuItems;
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const [notifRes, countRes] = await Promise.all([
+        api.get('/notifications'),
+        api.get('/notifications/unread-count'),
+      ]);
+      setNotifications(notifRes.data);
+      setUnreadCount(countRes.data);
+    } catch (err) {
+      console.error('Failed to fetch notifications', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user, fetchNotifications]);
+
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await api.post(`/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Failed to mark as read', err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await api.post('/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark all as read', err);
+    }
+  };
+
+  const getNotifIcon = (type: string) => {
+    switch (type) {
+      case 'subscription_request': return <CardMembership fontSize="small" color="primary" />;
+      case 'subscription_approved': return <CheckCircle fontSize="small" color="success" />;
+      case 'subscription_rejected': return <Info fontSize="small" color="error" />;
+      case 'booking': return <Event fontSize="small" color="info" />;
+      case 'booking_cancelled': return <Event fontSize="small" color="warning" />;
+      default: return <Info fontSize="small" />;
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins} мин назад`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} ч назад`;
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  };
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
   const handleMenuClick = (path: string) => { navigate(path); if (isMobile) setMobileOpen(false); };
@@ -250,7 +325,7 @@ export const Layout: React.FC = () => {
             )}
             <Box sx={{ flex: 1 }} />
             <IconButton color="inherit" onClick={(e) => setNotifAnchorEl(e.currentTarget)}>
-              <Badge badgeContent={2} color="error">
+              <Badge badgeContent={unreadCount} color="error">
                 <Notifications />
               </Badge>
             </IconButton>
@@ -262,21 +337,63 @@ export const Layout: React.FC = () => {
               transformOrigin={{ horizontal: 'right', vertical: 'top' }}
               anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
-              <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography fontWeight={600}>Уведомления</Typography>
+                {unreadCount > 0 && (
+                  <Typography
+                    variant="caption"
+                    color="primary"
+                    sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                    onClick={handleMarkAllAsRead}
+                  >
+                    Прочитать все
+                  </Typography>
+                )}
               </Box>
-              <MenuItem onClick={() => setNotifAnchorEl(null)} sx={{ py: 1.5 }}>
-                <ListItemIcon><Event fontSize="small" color="primary" /></ListItemIcon>
-                <ListItemText primary="Изменение в расписании" secondary="Сегодня, 10:00" />
-              </MenuItem>
-              <MenuItem onClick={() => setNotifAnchorEl(null)} sx={{ py: 1.5 }}>
-                <ListItemIcon><Info fontSize="small" color="info" /></ListItemIcon>
-                <ListItemText primary="Напоминание о занятии" secondary="Сегодня, 09:00" />
-              </MenuItem>
-              <MenuItem onClick={() => setNotifAnchorEl(null)} sx={{ py: 1.5 }}>
-                <ListItemIcon><Star fontSize="small" color="warning" /></ListItemIcon>
-                <ListItemText primary="Акция: Приведи друга" secondary="Вчера, 18:20" />
-              </MenuItem>
+              {notifications.length === 0 ? (
+                <Box sx={{ py: 3, textAlign: 'center' }}>
+                  <Notifications sx={{ color: 'text.secondary', mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary">Нет уведомлений</Typography>
+                </Box>
+              ) : (
+                notifications.slice(0, 10).map((notif) => (
+                  <MenuItem
+                    key={notif.id}
+                    sx={{
+                      py: 1.5,
+                      backgroundColor: notif.isRead ? 'transparent' : 'action.hover',
+                      '&:hover': {
+                        backgroundColor: 'action.selected',
+                      },
+                    }}
+                    onMouseEnter={() => !notif.isRead && handleMarkAsRead(notif.id)}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      {getNotifIcon(notif.type)}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="body2" fontWeight={notif.isRead ? 400 : 600} noWrap>
+                            {notif.title}
+                          </Typography>
+                          {!notif.isRead && <Circle sx={{ fontSize: 8, color: 'primary.main', ml: 1 }} />}
+                        </Box>
+                      }
+                      secondary={
+                        <>
+                          <Typography variant="caption" color="text.secondary" display="block" noWrap sx={{ maxWidth: 220 }}>
+                            {notif.message}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formatTime(notif.createdAt)}
+                          </Typography>
+                        </>
+                      }
+                    />
+                  </MenuItem>
+                ))
+              )}
             </Menu>
             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} color="inherit" sx={{ ml: 0.5 }}>
               <MoreVert />
